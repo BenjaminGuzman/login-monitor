@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/product.schema.json",
+  "title": "Config",
+  "description": "Config for login-monitor",
+  "type": "object",
+  "required": ["sender", "recipient", "subject", "textMessage"],
+  "properties": {
+    "sender": {
+      "description": "Sender's data",
+      "type": "object",
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "email": "string",
+        "pgpKeyId": "string"
+      }
+    },
+    "recipient": {
+      "description": "Recipient's data",
+      "type": "object",
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "email": "string",
+        "pgpKeyId": "string"
+      }
+    },
+    "cc": {
+      "description": "Carbon copy recipients data",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": "string",
+          "pgpKeyId": "string"
+        },
+        "required": [
+          "email"
+        ]
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "items": "string"
+    },
+    "subject": "string",
+    "textMessage": "string",
+    "htmlMessage": "string",
+    "senderPassFile": {
+      "description": "Sender's private key passphrase file",
+      "type": "string"
+    }
+  }
+}
