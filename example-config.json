@@ -1,0 +1,20 @@
+{
+  "$schema": "./schema.json",
+  "sender": {
+    "email": "bg@benjaminguzman.dev",
+    "pgpId": "bg@benjaminguzman.dev"
+  },
+  "recipient": {
+    "email": "bg@benjaminguzman.dev",
+    "pgpId": "bg@benjaminguzman.dev"
+  },
+  "cc": [{
+    "email": "bg@benjaminguzman.dev",
+    "pgpId": "bg@benjaminguzman.dev"
+  }],
+  "attachments": ["download-audit-rules.sh", "main.go"],
+  "recipientKeyURL": "https://benjaminguzman.dev/assets/pk.pub.asc",
+  "senderPassFile": "/root/server-1564.txt",
+  "subject": "New login on server",
+  "textMessage": "There was a new login. Details are provided as attachments.\nRemember this information is confidential and please RESPECT THE PRIVACY of other users"
+}
