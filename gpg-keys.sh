@@ -37,7 +37,7 @@ for arg in "$@" ; do
       echo -e "(This is the value for the key \"senderPassFile\" in the config file)"
       ;;
     *) # assume arg is a URL pointing to a public key
-      echo "Downloading key $arg..."
+      echo -e "Downloading key \033[92m$arg\033[0m..."
       curl "$arg" --progress-bar | gpg --import
       ;;
   esac
