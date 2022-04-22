@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/BenjaminGuzman/login-monitor/master/schema.json",
+  "sender": {
+    "email": "bg@benjaminguzman.dev",
+    "pgpKeyId": "bg@benjaminguzman.dev"
+  },
+  "recipient": {
+    "email": "bg@benjaminguzman.dev",
+    "pgpKeyId": "bg@benjaminguzman.dev"
+  },
+  "cc": [{
+    "email": "benja@kobd.io",
+    "pgpKeyId": "benja@kobd.io"
+  }, {
+    "email": "sysadmin@benjaminguzman.dev",
+    "pgpKeyId": "0xFA427B996B631BDF"
+  }],
+  "subject": "New login on %h",
+  "textMessage": "./message-example.txt",
+  "htmlMessage": "./message-example.html",
+  "senderPassFile": "private-passphrase.txt",
+  "attachments": ["download-audit-rules.sh", "main.go"]
+}
