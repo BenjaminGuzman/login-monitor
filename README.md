@@ -15,7 +15,7 @@ See the full configuration tutorial in my blog (TODO: add link)
 
 ## Configuration
 
-Check [schema.json](schema.json) and [example-config.json](example-config.json) to know more about the configuration.
+Check [schema.json](schema.json) and [config-example.json](config-example.json) to know more about the configuration.
 
 You can read my blog also. (TODO link)
 
