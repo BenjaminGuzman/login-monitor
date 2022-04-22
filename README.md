@@ -1,6 +1,6 @@
 # login monitor
 
-**login monitor** is a script that allows you to monitor logins to a (*nix) remote machine.
+**login monitor** is a script that allows you to monitor logins in a (*nix) remote machine.
 
 This tool sends you email after any successful login\*.
 
