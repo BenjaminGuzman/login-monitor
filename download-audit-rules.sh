@@ -8,8 +8,8 @@ fi
 
 declare -A urls # associative array of urls
 urls=(
-    ["loginuid inmutable"]="https://raw.githubusercontent.com/linux-audit/audit-userspace/master/rules/11-loginuid.rules"
-    ["installers"]="https://raw.githubusercontent.com/linux-audit/audit-userspace/master/rules/44-installers.rules"
+    ["Inmutable loginuid "]="https://raw.githubusercontent.com/linux-audit/audit-userspace/master/rules/11-loginuid.rules"
+    ["Installers"]="https://raw.githubusercontent.com/linux-audit/audit-userspace/master/rules/44-installers.rules"
     ["pci-dss v3.1"]="https://raw.githubusercontent.com/linux-audit/audit-userspace/master/rules/30-pci-dss-v31.rules"
     ["Inmutable configuration"]="https://raw.githubusercontent.com/linux-audit/audit-userspace/master/rules/99-finalize.rules"
 )
