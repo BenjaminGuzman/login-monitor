@@ -1,3 +1,4 @@
 New login on %h at %t RFC822Z t%.
 Details are provided as attachments.
 Remember this information is confidential and please, RESPECT THE PRIVACY of other users
+%f go.mod f%

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"io/fs"
 	"mime/multipart"
@@ -154,10 +155,11 @@ func (e *Email) SetHtmlMessage(htmlMessage string) *Email {
 }
 
 func (e *Email) SetAttachments(attachments []string) *Email {
-	realAttachments := make([]string, len(attachments))
+	realAttachments := make([]string, 0, len(attachments))
 	for _, attachment := range attachments {
 		stat, err := os.Stat(attachment)
 		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error with attachment '%s'. Ignoring it. %s", attachment, err)
 			continue
 		}
 		if !stat.IsDir() {
@@ -166,8 +168,10 @@ func (e *Email) SetAttachments(attachments []string) *Email {
 		}
 
 		// add all files inside the directory
-		err = filepath.WalkDir(attachment, func(path string, d fs.DirEntry, err error) error {
+		log.Debugf("Attachment %s is a directory, walking the directory", attachment)
+		_ = filepath.WalkDir(attachment, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Error with attachment '%s'. Ignoring it. %s", path, err)
 				return nil // just ignore the error and continue, but don't add the file
 			}
 			if d.IsDir() {
@@ -177,16 +181,17 @@ func (e *Email) SetAttachments(attachments []string) *Email {
 			realAttachments = append(realAttachments, path)
 			return nil
 		})
-		if err != nil {
-			continue
-		}
 	}
-	e.attachments = attachments
+	e.attachments = realAttachments
 	return e
 }
 
 // CCEmails Returns only the emails in Email.cc
 func (e *Email) CCEmails() []string {
+	if e.cc == nil {
+		return nil
+	}
+
 	emails := make([]string, 0, len(e.cc))
 	for _, entity := range e.cc {
 		if entity.Email != "" {
@@ -198,6 +203,10 @@ func (e *Email) CCEmails() []string {
 
 // CCPGPKeyIds Returns the values of Email.cc
 func (e *Email) CCPGPKeyIds() []string {
+	if e.cc == nil {
+		return nil
+	}
+
 	keyIds := make([]string, 0, len(e.cc))
 	for _, entity := range e.cc {
 		if entity.PGPKeyId != "" {
@@ -232,15 +241,19 @@ func (e *Email) SendEmail() (interface{}, error) {
 		return nil, errors.New("strategy needs to be initiated")
 	}
 
+	log.Debugln("Creating email payload")
 	payload, err := e.CreatePayload()
 	if err != nil {
 		return nil, err
 	}
+	log.Debugln("Done creating email payload")
 
+	log.Debugln("Sending email payload")
 	res, err := e.strategy.SendEmail(payload, e.Sender().Email)
 	if err != nil {
 		return nil, err
 	}
+	log.Debugln("Done sending email payload")
 
 	return res, nil
 }
@@ -283,6 +296,16 @@ func createBasicHeaders(from, to, subject string) string {
 		to,
 		subject,
 	)
+}
+
+func (e *Email) createCCHeader() string {
+	strBuilder := strings.Builder{}
+	if ccEmails := e.CCEmails(); ccEmails != nil && len(ccEmails) > 0 {
+		strBuilder.WriteString("Cc: ")
+		strBuilder.WriteString(strings.Join(ccEmails, ","))
+		strBuilder.WriteString("\r\n")
+	}
+	return strBuilder.String()
 }
 
 // CreateMessagePayload creates a multipart/alternative payload with the text plain and html message specified in e
@@ -344,11 +367,7 @@ func (e *Email) CreatePayload() ([]byte, error) {
 	payload.WriteString(createBasicHeaders(e.Sender().Email, e.Recipient().Email, e.subject))
 
 	// write CC headers
-	if e.cc != nil && len(e.cc) > 0 {
-		payload.WriteString("Cc: ")
-		payload.WriteString(strings.Join(e.CCEmails(), ","))
-		payload.WriteString("\r\n")
-	}
+	payload.WriteString(e.createCCHeader())
 	payload.WriteString("\r\nThis is a multi-part message in MIME format.\r\n")
 
 	// write message
@@ -416,11 +435,8 @@ func (e *Email) CreatePGPPayload() ([]byte, error) {
 	payload.WriteString(fmt.Sprintf("Content-Type: multipart/encrypted; protocol=\"application/pgp-encrypted\"; boundary=\"%s\"\r\n", mpWriter.Boundary()))
 	payload.WriteString(createBasicHeaders(e.Sender().Email, e.Recipient().Email, e.subject))
 
-	if e.cc != nil && len(e.cc) > 0 {
-		payload.WriteString("Cc: ")
-		payload.WriteString(strings.Join(e.CCEmails(), ","))
-		payload.WriteString("\r\n")
-	}
+	// write CC headers
+	payload.WriteString(e.createCCHeader())
 	payload.WriteString("\r\nThis is an OpenPGP/MIME encrypted message (RFC 4880 and 3156)\r\n")
 
 	// write PGP header for encrypted message and PGP version
@@ -531,6 +547,7 @@ func pgpEncrypt(data []byte, senderId string, recipientsIds ...string) ([]byte, 
 		gpgArgs[i+1] = recipientsIds[(i-len(initialArgs))/2]
 	}
 
+	log.Debugln("Encrypting data. Executing gpg", gpgArgs)
 	encryptCmd := exec.Command("gpg", gpgArgs...)
 	stdin, err := encryptCmd.StdinPipe()
 	if err != nil {
@@ -557,7 +574,7 @@ func pgpEncrypt(data []byte, senderId string, recipientsIds ...string) ([]byte, 
 	}
 
 	e, _ := io.ReadAll(stderr)
-	if err := encryptCmd.Wait(); err != nil { // if recipient's key doesn't exist, this will return an error
+	if err = encryptCmd.Wait(); err != nil { // if recipient's key doesn't exist, this will return an error
 		return nil, fmt.Errorf("error while encrypting PGP message, pgp stderr: \"%s\". %w", e, err)
 	}
 
@@ -578,6 +595,7 @@ func pgpSign(data []byte, senderId string, passphraseFile string) ([]byte, error
 		gpgArgs = append(gpgArgs, "--passphrase-file", passphraseFile)
 	}
 
+	log.Debugln("Signing data. Executing gpg", gpgArgs)
 	signCmd := exec.Command("gpg", gpgArgs...)
 	stdin, err := signCmd.StdinPipe()
 	if err != nil {

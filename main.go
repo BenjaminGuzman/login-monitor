@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"os"
+	"strings"
 )
 
-func configFlags(configPath, gmailOAuth2Config, gmailOAuth2Token *string) {
+func configFlags(configPath, gmailOAuth2Config, gmailOAuth2Token, logLevel *string) {
 	flag.StringVar(
 		configPath,
 		"config",
@@ -26,6 +27,13 @@ func configFlags(configPath, gmailOAuth2Config, gmailOAuth2Token *string) {
 		"gmail-oauth2-token",
 		"token.json",
 		"Token file for the Gmail Oauth2 strategy",
+	)
+	flag.StringVar(
+		logLevel,
+		"log-level",
+		"error",
+		"Log level to use throughout the application. "+
+			"Valid values are: trace, debug, info, warn, error, fatal, panic",
 	)
 }
 
@@ -61,9 +69,29 @@ func main() {
 		fmt.Println("Error while checking permissions.", err)
 	}
 
-	var configFile, gmailOAuth2Config, gmailOAuth2Token string
-	configFlags(&configFile, &gmailOAuth2Config, &gmailOAuth2Token)
+	var configFile, gmailOAuth2Config, gmailOAuth2Token, logLevel string
+	configFlags(&configFile, &gmailOAuth2Config, &gmailOAuth2Token, &logLevel)
 	flag.Parse()
+
+	switch strings.TrimSpace(strings.ToLower(logLevel)) {
+	case "trace":
+		log.SetLevel(log.TraceLevel)
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	case "fatal":
+		log.SetLevel(log.FatalLevel)
+	case "panic":
+		log.SetLevel(log.PanicLevel)
+	default:
+		fmt.Printf("%s is not recognized as a log level. Setting log level to error", logLevel)
+		log.SetLevel(log.ErrorLevel)
+	}
 
 	configReader, err := os.Open(configFile)
 	defer configReader.Close()
