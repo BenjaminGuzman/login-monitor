@@ -18,35 +18,18 @@ import (
 const MaxLen = 76
 
 type Entity struct {
-	email    string // email, e.g. sysadmin@example.com
-	pgpKeyId string // PGP key id, e.g. 0x7ADE4B572836C909 (it can be the email too, but just in some cases)
+	Email    string `json:"email"`    // email, e.g. sysadmin@example.com
+	PGPKeyId string `json:"pgpKeyId"` // PGP key id, e.g. 0x7ADE4B572836C909 (it can be the email too, but just in some cases)
 }
 
 // NewEntity creates a new entity with Entity.PGPKeyId and Entity.Email equal to the given email
 func NewEntity(email string) Entity {
-	return Entity{email: email, pgpKeyId: email}
+	return Entity{Email: email, PGPKeyId: email}
 }
 
+// NewEntityWPGP creates a new entity with the given email and pgp key id
 func NewEntityWPGP(email, pgpKeyId string) Entity {
-	return Entity{email: email, pgpKeyId: pgpKeyId}
-}
-
-func (e Entity) Email() string {
-	return e.email
-}
-
-func (e *Entity) SetEmail(email string) *Entity {
-	e.email = email
-	return e
-}
-
-func (e Entity) PGPKeyId() string {
-	return e.pgpKeyId
-}
-
-func (e *Entity) SetPGPKeyId(pgpKeyId string) *Entity {
-	e.pgpKeyId = pgpKeyId
-	return e
+	return Entity{Email: email, PGPKeyId: pgpKeyId}
 }
 
 type Email struct {
@@ -70,6 +53,25 @@ func NewEmail(strategy EmailStrategy) *Email {
 		attachments: []string{},
 		strategy:    strategy,
 	}
+}
+
+// Init (re) initiates the email object by calling setters. Particularly useful if email object was created by deserialization
+func (e *Email) Init() *Email {
+	// these setters have specific logic
+	return e.SetSubject(e.subject).
+		SetTextMessage(e.textMessage).
+		SetHtmlMessage(e.htmlMessage)
+}
+
+func (e *Email) InitFromConfig(c *EmailConfig) *Email {
+	return e.SetSubject(c.Subject).
+		SetCc(c.Cc).
+		SetSender(c.Sender).
+		SetAttachments(c.Attachments).
+		SetRecipient(c.Recipient).
+		SetHtmlMessage(c.HTMLMessage).
+		SetTextMessage(c.TextMessage).
+		SetSenderPassFile(c.SenderPassFile)
 }
 
 func (e *Email) Sender() Entity {
@@ -125,17 +127,28 @@ func (e *Email) SetCc(cc []Entity) *Email {
 }
 
 func (e *Email) SetSubject(subject string) *Email {
-	e.subject = subject
+	e.subject = ReplacePlaceholders(subject)
 	return e
 }
 
 func (e *Email) SetTextMessage(textMessage string) *Email {
-	e.textMessage = textMessage
+	if trimmed := strings.TrimSpace(textMessage); len(trimmed) > 5 && trimmed[len(trimmed)-4:] == ".txt" { // content may be a file
+		if contents, err := os.ReadFile(textMessage); err == nil {
+			textMessage = string(contents)
+		}
+	}
+	e.textMessage = ReplacePlaceholders(textMessage)
 	return e
 }
 
 func (e *Email) SetHtmlMessage(htmlMessage string) *Email {
-	e.htmlMessage = htmlMessage
+	if trimmed := strings.TrimSpace(htmlMessage); len(trimmed) > 6 && trimmed[len(trimmed)-5:] == ".html" { // content may be a file
+		if contents, err := os.ReadFile(htmlMessage); err == nil {
+			htmlMessage = string(contents)
+		}
+	}
+
+	e.htmlMessage = ReplacePlaceholders(htmlMessage)
 	return e
 }
 
@@ -144,20 +157,20 @@ func (e *Email) SetAttachments(attachments []string) *Email {
 	return e
 }
 
-// Returns only the emails in Email.cc
-func (e *Email) ccEmails() []string {
+// CCEmails Returns only the emails in Email.cc
+func (e *Email) CCEmails() []string {
 	emails := make([]string, len(e.cc))
 	for i, entity := range e.cc {
-		emails[i] = entity.Email()
+		emails[i] = entity.Email
 	}
 	return emails
 }
 
-// Returns the values of Email.cc
-func (e *Email) ccPGPKeyIds() []string {
+// CCPGPKeyIds Returns the values of Email.cc
+func (e *Email) CCPGPKeyIds() []string {
 	keyIds := make([]string, len(e.cc))
 	for i, entity := range e.cc {
-		keyIds[i] = entity.PGPKeyId()
+		keyIds[i] = entity.PGPKeyId
 	}
 	return keyIds
 }
@@ -192,7 +205,7 @@ func (e *Email) SendEmail() (interface{}, error) {
 		return nil, err
 	}
 
-	res, err := e.strategy.SendEmail(payload, e.Sender().Email())
+	res, err := e.strategy.SendEmail(payload, e.Sender().Email)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +227,7 @@ func (e *Email) SendPGPEmail() (interface{}, error) {
 		return nil, err
 	}
 
-	res, err := e.strategy.SendEmail(payload, e.Sender().Email())
+	res, err := e.strategy.SendEmail(payload, e.Sender().Email)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +238,7 @@ func (e *Email) SendPGPEmail() (interface{}, error) {
 // IsPGPCandidate tells if the email can be a PGP email. It is considered a candidate if at least one of the recipients'
 // (Email.Recipient or Email.Cc) public key is present in the GPG keyring
 func (e *Email) IsPGPCandidate() bool {
-	recipientsKeyIds := append(e.ccPGPKeyIds(), e.Recipient().PGPKeyId()) // This may seem wrong, but is actually right because we modify a copy of the Cc emails (getter returns such copy)
+	recipientsKeyIds := append(e.CCPGPKeyIds(), e.Recipient().PGPKeyId) // This may seem wrong, but is actually right because we modify a copy of the Cc emails (getter returns such copy)
 	return recipientsKeyExist(true, recipientsKeyIds...)
 }
 
@@ -296,12 +309,12 @@ func (e *Email) CreatePayload() ([]byte, error) {
 
 	// write email headers
 	payload.WriteString(fmt.Sprintf("Content-Type: multipart/mixed; boundary=\"%s\"\r\n", mpWriter.Boundary()))
-	payload.WriteString(createBasicHeaders(e.Sender().Email(), e.Recipient().Email(), e.subject))
+	payload.WriteString(createBasicHeaders(e.Sender().Email, e.Recipient().Email, e.subject))
 
 	// write CC headers
 	if e.cc != nil && len(e.cc) > 0 {
 		payload.WriteString("Cc: ")
-		payload.WriteString(strings.Join(e.ccEmails(), ","))
+		payload.WriteString(strings.Join(e.CCEmails(), ","))
 		payload.WriteString("\r\n")
 	}
 	payload.WriteString("\r\nThis is a multi-part message in MIME format.\r\n")
@@ -369,11 +382,11 @@ func (e *Email) CreatePGPPayload() ([]byte, error) {
 
 	// write email headers
 	payload.WriteString(fmt.Sprintf("Content-Type: multipart/encrypted; protocol=\"application/pgp-encrypted\"; boundary=\"%s\"\r\n", mpWriter.Boundary()))
-	payload.WriteString(createBasicHeaders(e.Sender().Email(), e.Recipient().Email(), e.subject))
+	payload.WriteString(createBasicHeaders(e.Sender().Email, e.Recipient().Email, e.subject))
 
 	if e.cc != nil && len(e.cc) > 0 {
 		payload.WriteString("Cc: ")
-		payload.WriteString(strings.Join(e.ccEmails(), ","))
+		payload.WriteString(strings.Join(e.CCEmails(), ","))
 		payload.WriteString("\r\n")
 	}
 	payload.WriteString("\r\nThis is an OpenPGP/MIME encrypted message (RFC 4880 and 3156)\r\n")
@@ -397,10 +410,10 @@ func (e *Email) CreatePGPPayload() ([]byte, error) {
 	}
 
 	// sign body and create a wrapper consisting of 2 parts: body and signature
-	senderPrivKeyExists := recipientsKeyExist(false, e.Sender().PGPKeyId())
+	senderPrivKeyExists := recipientsKeyExist(false, e.Sender().PGPKeyId)
 	if senderPrivKeyExists {
 		var signature []byte
-		if signature, err = pgpSign(body, e.Sender().PGPKeyId(), e.senderPassFile); err != nil {
+		if signature, err = pgpSign(body, e.Sender().PGPKeyId, e.senderPassFile); err != nil {
 			return nil, err
 		}
 		wrapper := bytes.Buffer{}
@@ -436,9 +449,9 @@ func (e *Email) CreatePGPPayload() ([]byte, error) {
 
 	// encrypt plain text body
 	var encryptedBody []byte
-	recipientsKeyIds := append(e.ccPGPKeyIds(), e.Recipient().PGPKeyId())       // This may seem wrong, but is actually right because we modify a copy of the Cc emails (getter returns such copy)
-	if senderPrivKeyExists || recipientsKeyExist(true, e.Sender().PGPKeyId()) { // If private key exist, public key must exist (or at least can be obtained from the private key)
-		encryptedBody, err = pgpEncrypt(body, e.Sender().PGPKeyId(), recipientsKeyIds...) // encrypt for both
+	recipientsKeyIds := append(e.CCPGPKeyIds(), e.Recipient().PGPKeyId)       // This may seem wrong, but is actually right because we modify a copy of the Cc emails (getter returns such copy)
+	if senderPrivKeyExists || recipientsKeyExist(true, e.Sender().PGPKeyId) { // If private key exist, public key must exist (or at least can be obtained from the private key)
+		encryptedBody, err = pgpEncrypt(body, e.Sender().PGPKeyId, recipientsKeyIds...) // encrypt for both
 	} else {
 		encryptedBody, err = pgpEncrypt(body, "", recipientsKeyIds...) // encrypt only for recipient as sender key doesn't exist
 	}
@@ -495,6 +508,7 @@ func pgpEncrypt(data []byte, senderId string, recipientsIds ...string) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
+	stderr, _ := encryptCmd.StderrPipe()
 
 	if err := encryptCmd.Start(); err != nil {
 		return nil, err
@@ -510,8 +524,9 @@ func pgpEncrypt(data []byte, senderId string, recipientsIds ...string) ([]byte, 
 		return nil, err
 	}
 
+	e, _ := io.ReadAll(stderr)
 	if err := encryptCmd.Wait(); err != nil { // if recipient's key doesn't exist, this will return an error
-		return nil, err
+		return nil, fmt.Errorf("error while encrypting PGP message, pgp stderr: \"%s\". %w", e, err)
 	}
 
 	return encrypted, nil
@@ -540,6 +555,7 @@ func pgpSign(data []byte, senderId string, passphraseFile string) ([]byte, error
 	if err != nil {
 		return nil, err
 	}
+	stderr, _ := signCmd.StderrPipe()
 
 	if err := signCmd.Start(); err != nil {
 		return nil, err
@@ -555,8 +571,9 @@ func pgpSign(data []byte, senderId string, passphraseFile string) ([]byte, error
 		return nil, err
 	}
 
+	e, _ := io.ReadAll(stderr)
 	if err := signCmd.Wait(); err != nil { // if recipient's key doesn't exist, this will return an error
-		return nil, err
+		return nil, fmt.Errorf("error while signing PGP message, pgp stderr: \"%s\". %w", e, err)
 	}
 
 	return signed, nil

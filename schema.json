@@ -47,8 +47,14 @@
       "items": "string"
     },
     "subject": "string",
-    "textMessage": "string",
-    "htmlMessage": "string",
+    "textMessage": {
+      "type": "string",
+      "description": "Message to be sent as text/plain data. You can use placeholders such as %h for the hostname, %t<time format>t% for the time formatted according to <time format>, %f<file>f% for the contents of <file>. You can provide a .txt file for simplicity"
+    },
+    "htmlMessage": {
+      "type": "string",
+      "description": "Message to be sent as text/plain data. You can use placeholders such as %h for the hostname, %t<time format>t% for the time formatted according to <time format>, %f<file>f% for the contents of <file>. You can provide a .html file for simplicity"
+    },
     "senderPassFile": {
       "description": "Sender's private key passphrase file",
       "type": "string"

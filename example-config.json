@@ -1,20 +1,23 @@
 {
-  "$schema": "./schema.json",
+  "$schema": "https://raw.githubusercontent.com/BenjaminGuzman/login-monitor/master/schema.json",
   "sender": {
-    "email": "bg@benjaminguzman.dev",
-    "pgpId": "bg@benjaminguzman.dev"
+    "email": "9benjaminguzman@gmail.com",
+    "pgpKeyId": "bg@benjaminguzman.dev"
   },
   "recipient": {
     "email": "bg@benjaminguzman.dev",
-    "pgpId": "bg@benjaminguzman.dev"
+    "pgpKeyId": "bg@benjaminguzman.dev"
   },
   "cc": [{
-    "email": "bg@benjaminguzman.dev",
-    "pgpId": "bg@benjaminguzman.dev"
+    "email": "tkdbenjasabio@gmail.com",
+    "pgpKeyId": "licantroposkate@gmail.com"
+  }, {
+    "email": "bg@benjaminguzman.net",
+    "pgpKeyId": "bg@benjaminguzman.dev"
   }],
-  "attachments": ["download-audit-rules.sh", "main.go"],
-  "recipientKeyURL": "https://benjaminguzman.dev/assets/pk.pub.asc",
-  "senderPassFile": "/root/server-1564.txt",
-  "subject": "New login on server",
-  "textMessage": "There was a new login. Details are provided as attachments.\nRemember this information is confidential and please RESPECT THE PRIVACY of other users"
+  "subject": "New login on %h",
+  "textMessage": "./message-example.txt",
+  "htmlMessage": "./message-example.html",
+  "senderPassFile": "private-passphrase.txt",
+  "attachments": ["download-audit-rules.sh", "main.go"]
 }

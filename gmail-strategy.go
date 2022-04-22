@@ -30,37 +30,37 @@ func (s *GmailOAuth2Strategy) Init(params ...interface{}) (interface{}, error) {
 	// read config
 	configFile, err := os.Open(configFilepath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading Gmail Oauth 2 config: %w", err)
 	}
 	defer configFile.Close()
 
 	b, err := ioutil.ReadAll(configFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading Gmail Oauth 2 config: %w", err)
 	}
 	config, err := google.ConfigFromJSON(b, gmail.GmailSendScope)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading Gmail Oauth 2 config: %w", err)
 	}
 
 	// read token
 	tokenFile, err := os.Open(tokenFilepath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading Gmail Oauth 2 token: %w", err)
 	}
 	defer tokenFile.Close()
 
 	token := oauth2.Token{}
 	err = json.NewDecoder(tokenFile).Decode(&token)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while parsing Gmail Oauth 2 token: %w", err)
 	}
 
 	tokenSource := config.TokenSource(context.Background(), &token)
 
 	service, err := gmail.NewService(context.Background(), option.WithTokenSource(tokenSource))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldn't start Gmail Oauth 2 client: %w", err)
 	}
 	s.gmailService = service
 
@@ -75,7 +75,7 @@ func (s *GmailOAuth2Strategy) SendEmail(payload []byte, sender string) (interfac
 	//fmt.Println(string(str))
 	call := s.gmailService.Users.Messages.Send(sender, &msg)
 	if _, err := call.Do(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldn't send email: %w", err)
 	}
 	return nil, nil
 }

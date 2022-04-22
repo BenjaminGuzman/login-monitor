@@ -8,12 +8,24 @@ import (
 	"os"
 )
 
-func configFlags(configPath *string) {
+func configFlags(configPath, gmailOAuth2Config, gmailOAuth2Token *string) {
 	flag.StringVar(
 		configPath,
 		"config",
 		"config.json",
 		"Config file to use",
+	)
+	flag.StringVar(
+		gmailOAuth2Config,
+		"gmail-oauth2-config",
+		"credentials.json",
+		"Credentials file for the Gmail OAuth2 strategy",
+	)
+	flag.StringVar(
+		gmailOAuth2Token,
+		"gmail-oauth2-token",
+		"token.json",
+		"Token file for the Gmail Oauth2 strategy",
 	)
 }
 
@@ -49,16 +61,29 @@ func main() {
 		fmt.Println("Error while checking permissions.", err)
 	}
 
-	var configFile string
-	configFlags(&configFile)
+	var configFile, gmailOAuth2Config, gmailOAuth2Token string
+	configFlags(&configFile, &gmailOAuth2Config, &gmailOAuth2Token)
 	flag.Parse()
 
 	configReader, err := os.Open(configFile)
+	defer configReader.Close()
 	if err != nil {
 		log.Fatalf("Error while reading config file '%s'. %s", configFile, err)
 	}
-	email := NewEmail(&GmailOAuth2Strategy{})
-	err = json.NewDecoder(configReader).Decode(&email)
+	email := NewEmail(&GmailOAuth2Strategy{}) // TODO handle other strategies
+	_, err = email.InitStrategy(gmailOAuth2Config, gmailOAuth2Token)
+	if err != nil {
+		log.Fatalf(
+			"Error while initiating Gmail Oauth 2 strategy. Config file: '%s', token file: '%s'. %s",
+			gmailOAuth2Config,
+			gmailOAuth2Token,
+			err,
+		)
+	}
+
+	config := EmailConfig{}
+	err = json.NewDecoder(configReader).Decode(&config)
+	email.InitFromConfig(&config)
 	if err != nil {
 		log.Fatalf("Error while decoding config file '%s'. %s", configFile, err)
 	}
