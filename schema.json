@@ -44,6 +44,7 @@
     },
     "attachments": {
       "type": "array",
+      "description": "If an item points to a file, the file will be attached. If an item points to a directory, ALL files within that directory will be attached",
       "items": "string"
     },
     "subject": "string",

@@ -19,5 +19,5 @@
   "textMessage": "./message-example.txt",
   "htmlMessage": "./message-example.html",
   "senderPassFile": "private-passphrase.txt",
-  "attachments": ["download-audit-rules.sh", "main.go"]
+  "attachments": ["/var/log/audit"]
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -153,24 +154,55 @@ func (e *Email) SetHtmlMessage(htmlMessage string) *Email {
 }
 
 func (e *Email) SetAttachments(attachments []string) *Email {
+	realAttachments := make([]string, len(attachments))
+	for _, attachment := range attachments {
+		stat, err := os.Stat(attachment)
+		if err != nil {
+			continue
+		}
+		if !stat.IsDir() {
+			realAttachments = append(realAttachments, attachment)
+			continue
+		}
+
+		// add all files inside the directory
+		err = filepath.WalkDir(attachment, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return nil // just ignore the error and continue, but don't add the file
+			}
+			if d.IsDir() {
+				return nil // walk into that directory, but obviously don't add it as an attachment
+			}
+
+			realAttachments = append(realAttachments, path)
+			return nil
+		})
+		if err != nil {
+			continue
+		}
+	}
 	e.attachments = attachments
 	return e
 }
 
 // CCEmails Returns only the emails in Email.cc
 func (e *Email) CCEmails() []string {
-	emails := make([]string, len(e.cc))
-	for i, entity := range e.cc {
-		emails[i] = entity.Email
+	emails := make([]string, 0, len(e.cc))
+	for _, entity := range e.cc {
+		if entity.Email != "" {
+			emails = append(emails, entity.Email)
+		}
 	}
 	return emails
 }
 
 // CCPGPKeyIds Returns the values of Email.cc
 func (e *Email) CCPGPKeyIds() []string {
-	keyIds := make([]string, len(e.cc))
-	for i, entity := range e.cc {
-		keyIds[i] = entity.PGPKeyId
+	keyIds := make([]string, 0, len(e.cc))
+	for _, entity := range e.cc {
+		if entity.PGPKeyId != "" {
+			keyIds = append(keyIds, entity.PGPKeyId)
+		}
 	}
 	return keyIds
 }
