@@ -17,6 +17,10 @@
         "pgpKeyId": "string"
       }
     },
+    "fakeSender": {
+      "description": "Fake sender's email. It is the one appearing in From header. It's not the actual sender",
+      "type": "string"
+    },
     "recipient": {
       "description": "Recipient's data",
       "type": "object",

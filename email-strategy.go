@@ -36,6 +36,7 @@ func NewEntityWPGP(email, pgpKeyId string) Entity {
 
 type Email struct {
 	sender         Entity
+	fakeSender     string
 	recipient      Entity
 	cc             []Entity
 	subject        string
@@ -69,6 +70,7 @@ func (e *Email) InitFromConfig(c *EmailConfig) *Email {
 	return e.SetSubject(c.Subject).
 		SetCc(c.Cc).
 		SetSender(c.Sender).
+		SetFakeSender(c.FakeSender).
 		SetAttachments(c.Attachments).
 		SetRecipient(c.Recipient).
 		SetHtmlMessage(c.HTMLMessage).
@@ -78,6 +80,13 @@ func (e *Email) InitFromConfig(c *EmailConfig) *Email {
 
 func (e *Email) Sender() Entity {
 	return e.sender
+}
+
+func (e *Email) FakeSender() string {
+	if e.fakeSender == "" {
+		return e.sender.Email
+	}
+	return e.fakeSender
 }
 
 func (e *Email) SenderPassFile() string {
@@ -110,6 +119,11 @@ func (e *Email) Attachments() []string {
 
 func (e *Email) SetSender(sender Entity) *Email {
 	e.sender = sender
+	return e
+}
+
+func (e *Email) SetFakeSender(fakeSender string) *Email {
+	e.fakeSender = fakeSender
 	return e
 }
 
@@ -364,7 +378,7 @@ func (e *Email) CreatePayload() ([]byte, error) {
 
 	// write email headers
 	payload.WriteString(fmt.Sprintf("Content-Type: multipart/mixed; boundary=\"%s\"\r\n", mpWriter.Boundary()))
-	payload.WriteString(createBasicHeaders(e.Sender().Email, e.Recipient().Email, e.subject))
+	payload.WriteString(createBasicHeaders(e.FakeSender(), e.Recipient().Email, e.subject))
 
 	// write CC headers
 	payload.WriteString(e.createCCHeader())
@@ -433,7 +447,7 @@ func (e *Email) CreatePGPPayload() ([]byte, error) {
 
 	// write email headers
 	payload.WriteString(fmt.Sprintf("Content-Type: multipart/encrypted; protocol=\"application/pgp-encrypted\"; boundary=\"%s\"\r\n", mpWriter.Boundary()))
-	payload.WriteString(createBasicHeaders(e.Sender().Email, e.Recipient().Email, e.subject))
+	payload.WriteString(createBasicHeaders(e.FakeSender(), e.Recipient().Email, e.subject))
 
 	// write CC headers
 	payload.WriteString(e.createCCHeader())
