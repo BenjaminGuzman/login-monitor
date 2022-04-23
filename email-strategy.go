@@ -549,35 +549,29 @@ func pgpEncrypt(data []byte, senderId string, recipientsIds ...string) ([]byte, 
 
 	log.Debugln("Encrypting data. Executing gpg", gpgArgs)
 	encryptCmd := exec.Command("gpg", gpgArgs...)
+	var stdout, stderr bytes.Buffer
+	encryptCmd.Stderr = &stderr
+	encryptCmd.Stdout = &stdout
+
 	stdin, err := encryptCmd.StdinPipe()
 	if err != nil {
 		return nil, err
 	}
-	stdout, err := encryptCmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	stderr, _ := encryptCmd.StderrPipe()
+
+	go func() {
+		defer stdin.Close() // we need to close it, otherwise gpg will keep reading from it and block the thread
+		_, err = stdin.Write(data)
+	}()
 
 	if err := encryptCmd.Start(); err != nil {
 		return nil, err
 	}
 
-	if _, err = stdin.Write(data); err != nil {
-		return nil, err
-	}
-	_ = stdin.Close() // we need to close it, otherwise gpg will keep reading from it and block the thread
-
-	encrypted, err := io.ReadAll(stdout)
-	if err != nil {
-		return nil, err
+	if err := encryptCmd.Wait(); err != nil { // if recipient's key doesn't exist, this will return an error
+		return nil, fmt.Errorf("error while encrypting PGP message, pgp stderr: \"%s\". %w", stderr.Bytes(), err)
 	}
 
-	e, _ := io.ReadAll(stderr)
-	if err = encryptCmd.Wait(); err != nil { // if recipient's key doesn't exist, this will return an error
-		return nil, fmt.Errorf("error while encrypting PGP message, pgp stderr: \"%s\". %w", e, err)
-	}
-
+	encrypted := stdout.Bytes()
 	return encrypted, nil
 }
 
@@ -597,35 +591,29 @@ func pgpSign(data []byte, senderId string, passphraseFile string) ([]byte, error
 
 	log.Debugln("Signing data. Executing gpg", gpgArgs)
 	signCmd := exec.Command("gpg", gpgArgs...)
+	var stdout, stderr bytes.Buffer
+	signCmd.Stderr = &stderr
+	signCmd.Stdout = &stdout
+
 	stdin, err := signCmd.StdinPipe()
 	if err != nil {
 		return nil, err
 	}
-	stdout, err := signCmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	stderr, _ := signCmd.StderrPipe()
+
+	go func() {
+		defer stdin.Close() // we need to close it, otherwise gpg will keep reading from it and block the thread
+		_, err = stdin.Write(data)
+	}()
 
 	if err := signCmd.Start(); err != nil {
 		return nil, err
 	}
 
-	if _, err = stdin.Write(data); err != nil {
-		return nil, err
-	}
-	_ = stdin.Close() // we need to close it, otherwise gpg will keep reading from it and will block the thread
-
-	signed, err := io.ReadAll(stdout)
-	if err != nil {
-		return nil, err
-	}
-
-	e, _ := io.ReadAll(stderr)
 	if err := signCmd.Wait(); err != nil { // if recipient's key doesn't exist, this will return an error
-		return nil, fmt.Errorf("error while signing PGP message, pgp stderr: \"%s\". %w", e, err)
+		return nil, fmt.Errorf("error while signing PGP message, pgp stderr: \"%s\". %w", stderr.Bytes(), err)
 	}
 
+	signed := stdout.Bytes()
 	return signed, nil
 }
 
