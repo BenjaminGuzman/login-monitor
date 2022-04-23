@@ -1,20 +1,21 @@
-package main
+package email
 
 import (
 	"flag"
+	"login-monitor/config"
 	"testing"
 )
 
-var sender = flag.String("sender", "sender@example.com", "Sender email")
-var recipient = flag.String("recipient", "recipient@example.com", "Recipient email")
+var sender = flag.String("gmail-sender", "sender@example.com", "Sender email")
+var recipient = flag.String("gmail-recipient", "recipient@example.com", "Recipient email")
 
-var configFile = flag.String("config", "credentials.json", "Credentials file")
-var tokenFile = flag.String("token", "token.json", "Token file")
+var configFile = flag.String("gmail-config", "credentials.json", "Credentials file")
+var tokenFile = flag.String("gmail-token", "token.json", "Token file")
 
 func TestOAuth2(t *testing.T) {
 	email := NewEmail(&GmailOAuth2Strategy{}).
-		SetSender(NewEntity(*sender)).
-		SetRecipient(NewEntity(*recipient)).
+		SetSender(config.NewEntity(*sender)).
+		SetRecipient(config.NewEntity(*recipient)).
 		SetSubject("Testing OAuth 2 strategy").
 		SetHtmlMessage("<html><body><p>This is an <i>email</i> <b>test</b></p></body></html>").
 		SetTextMessage("This is an email test (using text)").
@@ -34,10 +35,10 @@ func TestOAuth2(t *testing.T) {
 
 func TestOAuth2PGP(t *testing.T) {
 	email := NewEmail(&GmailOAuth2Strategy{}).
-		SetSender(NewEntity(*sender)).
-		SetRecipient(NewEntity(*recipient)).
+		SetSender(config.NewEntity(*sender)).
+		SetRecipient(config.NewEntity(*recipient)).
 		SetSubject("Testing OAuth 2 strategy").
-		SetCc([]Entity{NewEntityWPGP("bg@benjaminguzman.dev", "0xE23BA39CD714EF8A")}).
+		SetCc([]config.Entity{config.NewEntityWPGP("bg@benjaminguzman.dev", "0xE23BA39CD714EF8A")}).
 		SetHtmlMessage("<html><body><p>This is an <i>email</i> <b>test</b></p></body></html>").
 		SetTextMessage("This is an email test (using text)").
 		SetAttachments([]string{"./email-strategy.go"})

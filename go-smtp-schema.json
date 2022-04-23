@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/BenjaminGuzman/login-monitor/master/go-smtp-schema.json",
+  "title": "Config",
+  "description": "Config for login-monitor go-smtp strategy",
+  "type": "object",
+  "required": ["host", "port"],
+  "properties": {
+    "identity": "string",
+    "username": "string",
+    "password": "string",
+    "host": "string",
+    "port": "string"
+  }
+}

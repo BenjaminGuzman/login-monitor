@@ -1,4 +1,4 @@
-package main
+package email
 
 import (
 	"context"
@@ -16,8 +16,6 @@ import (
 type GmailOAuth2Strategy struct {
 	gmailService *gmail.Service
 }
-
-//func New
 
 // Init initiates a new gmail.Service (required by other methods)
 // 1st param: filepath to oauth2 config file (client id, client secret, endpoint, redirect url...)

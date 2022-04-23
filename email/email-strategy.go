@@ -1,4 +1,4 @@
-package main
+package email
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io"
 	"io/fs"
+	"login-monitor/config"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -19,26 +20,11 @@ import (
 // MaxLen Max line length for the email
 const MaxLen = 76
 
-type Entity struct {
-	Email    string `json:"email"`    // email, e.g. sysadmin@example.com
-	PGPKeyId string `json:"pgpKeyId"` // PGP key id, e.g. 0x7ADE4B572836C909 (it can be the email too, but just in some cases)
-}
-
-// NewEntity creates a new entity with Entity.PGPKeyId and Entity.Email equal to the given email
-func NewEntity(email string) Entity {
-	return Entity{Email: email, PGPKeyId: email}
-}
-
-// NewEntityWPGP creates a new entity with the given email and pgp key id
-func NewEntityWPGP(email, pgpKeyId string) Entity {
-	return Entity{Email: email, PGPKeyId: pgpKeyId}
-}
-
 type Email struct {
-	sender         Entity
+	sender         config.Entity
 	fakeSender     string
-	recipient      Entity
-	cc             []Entity
+	recipient      config.Entity
+	cc             []config.Entity
 	subject        string
 	textMessage    string
 	htmlMessage    string
@@ -52,7 +38,7 @@ type Email struct {
 // NewEmail creates a new Email with the given strategy
 func NewEmail(strategy EmailStrategy) *Email {
 	return &Email{
-		cc:          []Entity{},
+		cc:          []config.Entity{},
 		attachments: []string{},
 		strategy:    strategy,
 	}
@@ -66,7 +52,7 @@ func (e *Email) Init() *Email {
 		SetHtmlMessage(e.htmlMessage)
 }
 
-func (e *Email) InitFromConfig(c *EmailConfig) *Email {
+func (e *Email) InitFromConfig(c *config.EmailConfig) *Email {
 	return e.SetSubject(c.Subject).
 		SetCc(c.Cc).
 		SetSender(c.Sender).
@@ -78,7 +64,7 @@ func (e *Email) InitFromConfig(c *EmailConfig) *Email {
 		SetSenderPassFile(c.SenderPassFile)
 }
 
-func (e *Email) Sender() Entity {
+func (e *Email) Sender() config.Entity {
 	return e.sender
 }
 
@@ -93,11 +79,11 @@ func (e *Email) SenderPassFile() string {
 	return e.senderPassFile
 }
 
-func (e *Email) Recipient() Entity {
+func (e *Email) Recipient() config.Entity {
 	return e.recipient
 }
 
-func (e *Email) Cc() []Entity {
+func (e *Email) Cc() []config.Entity {
 	return e.cc
 }
 
@@ -117,7 +103,7 @@ func (e *Email) Attachments() []string {
 	return e.attachments
 }
 
-func (e *Email) SetSender(sender Entity) *Email {
+func (e *Email) SetSender(sender config.Entity) *Email {
 	e.sender = sender
 	return e
 }
@@ -132,12 +118,12 @@ func (e *Email) SetSenderPassFile(passFile string) *Email {
 	return e
 }
 
-func (e *Email) SetRecipient(recipient Entity) *Email {
+func (e *Email) SetRecipient(recipient config.Entity) *Email {
 	e.recipient = recipient
 	return e
 }
 
-func (e *Email) SetCc(cc []Entity) *Email {
+func (e *Email) SetCc(cc []config.Entity) *Email {
 	e.cc = cc
 	return e
 }

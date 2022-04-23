@@ -1,7 +1,8 @@
-package main
+package email
 
 import (
 	"log"
+	"login-monitor/config"
 	"strings"
 	"testing"
 )
@@ -14,8 +15,8 @@ func getBoundary(payload string) string {
 
 func TestCreatePayload(t *testing.T) {
 	email := NewEmail(nil).
-		SetSender(NewEntity("bg@benjaminguzman.dev")).
-		SetRecipient(NewEntity("benja@kobd.io")).
+		SetSender(config.NewEntity("bg@benjaminguzman.dev")).
+		SetRecipient(config.NewEntity("benja@kobd.io")).
 		SetSubject("Testing CreatePayload").
 		SetHtmlMessage("<html><body><p>Testing <b>Create Payload</b></p></body></html>").
 		SetTextMessage("Testing CreatePayload").
