@@ -2,9 +2,9 @@
   "$schema": "https://raw.githubusercontent.com/BenjaminGuzman/login-monitor/master/schema.json",
   "sender": {
     "email": "bg@benjaminguzman.dev",
-    "fakeSender": "fakesender@benjaminguzman.dev",
     "pgpKeyId": "bg@benjaminguzman.dev"
   },
+  "fakeSender": "fakesender@benjaminguzman.dev",
   "recipient": {
     "email": "bg@benjaminguzman.dev",
     "pgpKeyId": "bg@benjaminguzman.dev"
