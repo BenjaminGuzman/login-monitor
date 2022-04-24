@@ -114,15 +114,15 @@ func stringDefault(str, def string) string {
 }
 
 func main() {
-	if err := checkPermissions(); err != nil {
-		fmt.Println("Error while checking permissions.", err)
-	}
-
 	var configFile, logLevel, strategy string      // general configuration
 	var gmailOAuth2Config, gmailOAuth2Token string // gmail-oauth2 strategy config
 	var goSMTPConfig string                        // go-smtp strategy config
 	configFlags(&configFile, &logLevel, &strategy, &gmailOAuth2Config, &gmailOAuth2Token, &goSMTPConfig)
 	flag.Parse()
+
+	if err := checkPermissions(); err != nil {
+		fmt.Println("Error while checking permissions.", err)
+	}
 
 	setLogLevel(logLevel)
 
