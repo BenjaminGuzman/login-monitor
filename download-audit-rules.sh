@@ -22,4 +22,4 @@ done
 echo "Done."
 
 echo -e "\nNow is time to update rules configuration (inside /etc/audit/rules.d) as needed."
-echo -e "\033[97mReboot\033[0m when you finish to apply changes"
+echo -e "When you're done, \033[97mreboot\033[0m to apply changes"
