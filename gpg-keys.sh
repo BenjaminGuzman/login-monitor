@@ -30,7 +30,7 @@ for arg in "$@" ; do
 
       pub_out="/tmp/$host.pub.asc"
       gpg --export --armor "$host@$host" > "$pub_out"
-      echo -e "Public key is saved to \033[97m$pub_out\033[0m. Still, it is shown below for convenience."
+      echo -e "Public key is saved to \033[97m$pub_out\033[0m and it is shown below for convenience."
       echo "(This is the one you import to your personal keyring to verify emails sent from this server)"
       more "$pub_out"
       echo -e "Passphrase is saved to \033[97m$passphrase_file\033[0m"
